@@ -1,0 +1,8 @@
+node_modules/
+release/
+dist/
+.npm-cache/
+.electron-cache/
+.eb-cache-test/
+*.log
+.icon-render.*
