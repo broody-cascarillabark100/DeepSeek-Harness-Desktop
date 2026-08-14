@@ -67,8 +67,8 @@ git commit -m "Initial commit: DeepSeek Harness one-click desktop app"
 
 > 如果提示需要配置用户名/邮箱，先执行：
 > ```powershell
-> git config --global user.name "你的名字"
-> git config --global user.email "你的邮箱@example.com"
+> git config --global user.name "Ch0uHuaZ1"
+> git config --global user.email "tinajun.hua@qq.com"
 > ```
 
 ---
@@ -78,7 +78,7 @@ git commit -m "Initial commit: DeepSeek Harness one-click desktop app"
 把下面的 `YOUR_USERNAME` 和 `REPO_NAME` 换成你自己的：
 
 ```powershell
-git remote add origin https://github.com/YOUR_USERNAME/REPO_NAME.git
+git remote add origin https://github.com/Ch0uHuaZ1/DeepSeek-Harness-Desktop.git
 git push -u origin main
 ```
 
