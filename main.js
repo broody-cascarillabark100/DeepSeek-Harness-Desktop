@@ -3,8 +3,8 @@
  *
  * 职责：
  *  1. 检查 Harness Web 服务（默认 http://127.0.0.1:3080）是否已在运行；
- *     未运行时，自动在后台用 `node --import tsx/esm apps/cli/src/bin.ts web`
- *     启动它（工作目录为仓库根目录）。
+ *     未运行时，自动在后台启动它（默认用 npm 官方包 `npx @deepseek-ai/dsh web`，
+ *     无需本地 git 仓库；也可配置为从本地仓库启动）。
  *  2. 等待服务就绪后，在 Electron 窗口中加载 Web UI。
  *  3. 关闭窗口时最小化到系统托盘，服务继续在后台运行；
  *     托盘菜单「退出」才会停止本次由本应用拉起的 Harness 进程。
@@ -17,18 +17,23 @@ const path = require('node:path')
 const http = require('node:http')
 const net = require('node:net')
 
-// 兜底错误日志：任何未捕获异常都落到工作目录，便于排查启动失败
+// 开发/便携场景：允许用环境变量覆盖用户数据目录（隔离配置与日志）
+if (process.env.DSH_DESKTOP_USERDATA) {
+  try { app.setPath('userData', process.env.DSH_DESKTOP_USERDATA) } catch { /* ignore */ }
+}
+
+// 兜底错误日志：任何未捕获异常都落到工作目录，便于排查启动失败。
+// 注意：处理器内部严禁再调用 console.*（管道断开时会再次抛 EPIPE 导致递归），
+// 只做文件写入。
 process.on('uncaughtException', (err) => {
   try {
     appendFileSync(path.join(__dirname, 'crash.log'), `[${new Date().toISOString()}] ${err.stack || err}\n`, 'utf8')
   } catch { /* ignore */ }
-  console.error(err)
 })
 process.on('unhandledRejection', (reason) => {
   try {
     appendFileSync(path.join(__dirname, 'crash.log'), `[${new Date().toISOString()}] unhandledRejection: ${reason}\n`, 'utf8')
   } catch { /* ignore */ }
-  console.error(reason)
 })
 
 // ---------------------------------------------------------------------------
@@ -46,11 +51,16 @@ function loadSettings() {
   const file = path.join(app.getPath('userData'), 'settings.json')
   let settings = {}
   try {
-    settings = JSON.parse(require('node:fs').readFileSync(file, 'utf8'))
+    // 兼容 UTF-8 BOM（Windows 编辑器/Set-Content 常见）：先去掉 \uFEFF 再解析
+    const raw = require('node:fs').readFileSync(file, 'utf8')
+    settings = JSON.parse(raw.replace(/^\uFEFF/, ''))
   } catch { /* 首次运行没有设置文件 */ }
   return {
     repoPath: settings.repoPath || process.env.DSH_DESKTOP_REPO || DEFAULT_REPO,
     port: Number(settings.port || process.env.DSH_DESKTOP_PORT || DEFAULT_PORT),
+    // useNpx: 默认 true（用 npm 官方包，无需本地仓库）。
+    // 显式设 false 且配置了存在的 repoPath 时，改用本地仓库启动。
+    useNpx: settings.useNpx !== undefined ? settings.useNpx : true,
   }
 }
 
@@ -68,7 +78,9 @@ const config = loadSettings()
 
 function log(message) {
   const line = `[${new Date().toISOString()}] ${message}`
-  console.log(line)
+  // stdout 管道可能被外部重定向并在运行中断开（如后台任务），此时
+  // console.log 会抛 EPIPE；静默忽略即可，不影响文件日志。
+  try { console.log(line) } catch { /* ignore */ }
   try {
     const dir = path.join(app.getPath('userData'), 'logs')
     mkdirSync(dir, { recursive: true })
@@ -135,24 +147,58 @@ function findNodeBinary() {
   return null
 }
 
-/** 启动 Harness：node --import tsx/esm apps/cli/src/bin.ts web */
+/**
+ * 启动 Harness。
+ *
+ * 两种模式：
+ *  1. npx 模式（默认）：`npx --yes @deepseek-ai/dsh web`，从 npm 官方包运行，
+ *     不需要本地 git 仓库 —— 只装 exe + Node.js 即可用。
+ *  2. 仓库模式：settings.json 里配置了存在的 repoPath 时，用
+ *     `node --import tsx/esm apps/cli/src/bin.ts web` 从本地仓库运行。
+ */
 function startHarness() {
-  if (!existsSync(config.repoPath)) {
-    log(`仓库路径不存在: ${config.repoPath}`)
-    return null
-  }
   const nodeBin = findNodeBinary()
   if (!nodeBin) {
     log('未找到系统 Node.js，无法启动 Harness')
     return null
   }
-  const args = ['--import', 'tsx/esm', 'apps/cli/src/bin.ts', 'web']
-  log(`启动 Harness: ${nodeBin} ${args.join(' ')}  (cwd=${config.repoPath})`)
-  const child = spawn(nodeBin, args, {
-    cwd: config.repoPath,
+
+  const useRepo = config.repoPath && existsSync(config.repoPath)
+  const isNpx = config.useNpx !== false   // 默认 npx 模式；显式 useNpx=false 强制仓库模式
+
+  let bin, args, cwd
+  if (useRepo && !isNpx) {
+    bin = nodeBin
+    args = ['--import', 'tsx/esm', 'apps/cli/src/bin.ts', 'web', '--port', String(config.port)]
+    cwd = config.repoPath
+  } else {
+    // npx 模式：用 node 直接运行 npm 自带的 npx-cli.js（Windows 上 npx 是 .cmd，
+    // spawn 不可靠），node 路径在 <node安装目录>/node_modules/npm/bin/npx-cli.js。
+    // cwd 必须用干净目录（用户主目录）：若用仓库目录，npx 会在仓库的
+    // node_modules/.bin 里找 dsh 而失败（'dsh' is not recognized）。
+    const nodeDir = path.dirname(nodeBin)
+    const npxCli = path.join(nodeDir, 'node_modules', 'npm', 'bin', 'npx-cli.js')
+    bin = nodeBin
+    args = [npxCli, '--yes', '@deepseek-ai/dsh', 'web', '--port', String(config.port)]
+    cwd = process.env.USERPROFILE || nodeDir
+    if (useRepo) log(`仓库路径存在 (${config.repoPath})，但使用 npx 官方包启动（设置 useNpx=false 可改用本地仓库）`)
+    if (!existsSync(npxCli)) {
+      log(`未找到 npx-cli.js (${npxCli})，回退为调用系统 npx`)
+      // npx 在 Windows 是 .cmd，需要 cmd /c 才能 spawn
+      bin = process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe'
+      args = ['/c', 'npx', '--yes', '@deepseek-ai/dsh', 'web', '--port', String(config.port)]
+    }
+  }
+
+  log(`启动 Harness: ${bin} ${args.join(' ')}  (cwd=${cwd || '.'})`)
+  const child = spawn(bin, args, {
+    cwd,
     windowsHide: true,          // 不弹出控制台窗口
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env },
+    env: {
+      ...process.env,
+      DSH_TELEMETRY_DISABLED: process.env.DSH_TELEMETRY_DISABLED || '1',
+    },
   })
   child.stdout.on('data', (d) => log(`[harness] ${d.toString().trimEnd()}`))
   child.stderr.on('data', (d) => log(`[harness:err] ${d.toString().trimEnd()}`))
@@ -299,12 +345,12 @@ if (!gotLock) {
     let ready = await probeReady(2000)
     log(`probeReady => ${ready}`)
     if (!ready) {
-      // 2) 否则后台启动 Harness
+      // 2) 否则后台启动 Harness（npx 首次运行需下载官方包，等待 240s）
       harnessProcess = startHarness()
       if (harnessProcess) {
         weStartedIt = true
         createLoadingWindow()
-        ready = await waitForReady()
+        ready = await waitForReady(240000)
         if (loadingWindow) { loadingWindow.close(); loadingWindow = null }
       }
     }
