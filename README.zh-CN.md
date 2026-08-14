@@ -2,6 +2,9 @@
 
 [English](README.md) | 中文
 
+[![GitHub release](https://img.shields.io/github/v/release/Ch0uHuaZ1/DeepSeek-Harness-Desktop?style=for-the-badge&label=下载&color=4d6bfe)](https://github.com/Ch0uHuaZ1/DeepSeek-Harness-Desktop/releases/latest)
+[![License](https://img.shields.io/github/license/Ch0uHuaZ1/DeepSeek-Harness-Desktop?style=for-the-badge&color=green)](LICENSE)
+
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的一键桌面应用。
 双击图标即可使用，无需每次打开终端、手动 `cd` 进 git 仓库敲命令。
 

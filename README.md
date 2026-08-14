@@ -2,6 +2,9 @@
 
 English | [中文](README.zh-CN.md)
 
+[![GitHub release](https://img.shields.io/github/v/release/Ch0uHuaZ1/DeepSeek-Harness-Desktop?style=for-the-badge&label=Download&color=4d6bfe)](https://github.com/Ch0uHuaZ1/DeepSeek-Harness-Desktop/releases/latest)
+[![License](https://img.shields.io/github/license/Ch0uHuaZ1/DeepSeek-Harness-Desktop?style=for-the-badge&color=green)](LICENSE)
+
 A one-click desktop application for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
 Double-click the icon and start using it — no need to open a terminal or cd into the git repository
 every time.
